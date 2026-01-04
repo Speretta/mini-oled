@@ -37,8 +37,12 @@ impl<const N: usize, const W: u32, const H: u32, const O: u8> Canvas<N, W, H, O>
         self.display_properties.set_rotation(display_rotation);
     }
 
-    pub(crate) fn get_buffer(&self) -> &[u8; N] {
+    pub fn get_buffer(&self) -> &[u8; N] {
         &self.buffer
+    }
+
+    pub fn get_mut_buffer(&mut self) -> &mut [u8; N] {
+        &mut self.buffer
     }
 
     pub(crate) fn get_dirty_area(&self) -> ((u32, u32), (u32, u32)) {
@@ -56,7 +60,7 @@ impl<const N: usize, const W: u32, const H: u32, const O: u8> Canvas<N, W, H, O>
     }
 
     #[inline]
-    fn set_pixel(&mut self, x: u32, y: u32, pixel_status: bool) {
+    pub fn set_pixel(&mut self, x: u32, y: u32, pixel_status: bool) {
         let (physical_width, physical_height) = self.display_properties.get_display_size();
         let display_rotation = self.display_properties.get_rotation();
 
