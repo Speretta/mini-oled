@@ -13,6 +13,3 @@ macro_rules! fast_mul {
         }
     }};
 }
-
-
-

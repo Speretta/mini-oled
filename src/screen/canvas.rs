@@ -1,4 +1,6 @@
-use crate::{error::MiniOledError, fast_mul};
+use crate::fast_mul;
+
+use crate::error::MiniOledError;
 
 use super::properties::{DisplayProperties, DisplayRotation};
 
@@ -19,7 +21,7 @@ impl<const N: usize, const W: u32, const H: u32, const O: u8> Canvas<N, W, H, O>
         }
     }
 
-    pub(crate) fn get_column_offset(&self) -> u8{
+    pub(crate) fn get_column_offset(&self) -> u8 {
         self.display_properties.get_column_offset()
     }
 
@@ -30,7 +32,7 @@ impl<const N: usize, const W: u32, const H: u32, const O: u8> Canvas<N, W, H, O>
     pub(crate) fn get_rotation(&self) -> &DisplayRotation {
         self.display_properties.get_rotation()
     }
-    
+
     pub(crate) fn set_rotation(&mut self, display_rotation: DisplayRotation) {
         self.display_properties.set_rotation(display_rotation);
     }
@@ -43,9 +45,9 @@ impl<const N: usize, const W: u32, const H: u32, const O: u8> Canvas<N, W, H, O>
         (self.dirty_area_min, self.dirty_area_max)
     }
 
-    pub(crate) fn force_full_dirty_area(&mut self){
+    pub(crate) fn force_full_dirty_area(&mut self) {
         self.dirty_area_min = (0, 0);
-        self.dirty_area_max = (W -1, H -1);
+        self.dirty_area_max = (W - 1, H - 1);
     }
 
     pub(crate) fn reset_dirty_area(&mut self) {
@@ -87,12 +89,12 @@ impl<const N: usize, const W: u32, const H: u32, const O: u8> Canvas<N, W, H, O>
 
         let (idx, bit_mask) = match *display_rotation {
             DisplayRotation::Rotate0 | DisplayRotation::Rotate180 => {
-                let idx = fast_mul!((y>>3), W) + x; // y >> 3 is equal to y / 8
+                let idx = fast_mul!((y >> 3), W) + x; // y >> 3 is equal to y / 8
                 let bit = 1 << (y & 7); // y & 7 is equal to y % 8
                 (idx as usize, bit)
             }
             DisplayRotation::Rotate90 | DisplayRotation::Rotate270 => {
-                let idx = fast_mul!((x>>3), W) + y; // y >> 3 is equal to y / 8
+                let idx = fast_mul!((x >> 3), W) + y; // y >> 3 is equal to y / 8
                 let bit = 1 << (x & 7); // y & 7 is equal to y % 8
                 (idx as usize, bit)
             }
@@ -104,7 +106,7 @@ impl<const N: usize, const W: u32, const H: u32, const O: u8> Canvas<N, W, H, O>
            }
            It's same to above code, it's better for branching but not reading
         */
-        if (idx as usize) < N {
+        if idx < N {
             let pixel_status_mask = (-(pixel_status as i8)) as u8;
             self.buffer[idx] = (self.buffer[idx] & !bit_mask) | (pixel_status_mask & bit_mask);
         }
@@ -141,7 +143,9 @@ impl<const N: usize, const W: u32, const H: u32, const O: u8> DrawTarget for Can
 }
 
 #[cfg(feature = "embedded-graphics-core")]
-impl<const N: usize, const W: u32, const H: u32, const O: u8> OriginDimensions for Canvas<N, W, H, O> {
+impl<const N: usize, const W: u32, const H: u32, const O: u8> OriginDimensions
+    for Canvas<N, W, H, O>
+{
     fn size(&self) -> Size {
         let (width, height) = self.display_properties.get_display_size();
 

@@ -1,5 +1,8 @@
 use crate::{
-    command::{Command, CommandBuffer, Page}, error::MiniOledError, fast_mul, interface::CommunicationInterface
+    command::{Command, CommandBuffer, Page},
+    error::MiniOledError,
+    fast_mul,
+    interface::CommunicationInterface,
 };
 
 use super::{
@@ -19,7 +22,8 @@ pub struct Sh1106<CI: CommunicationInterface> {
 
 impl<CI: CommunicationInterface> Sh1106<CI> {
     pub fn new(communication_interface: CI) -> Sh1106<CI> {
-        let display_properties: DisplayProperties<WIDTH, HEIGHT, 2> = DisplayProperties::new(DisplayRotation::Rotate0);
+        let display_properties: DisplayProperties<WIDTH, HEIGHT, 2> =
+            DisplayProperties::new(DisplayRotation::Rotate0);
         Sh1106 {
             communication_interface,
             canvas: Canvas::new(display_properties),
@@ -34,7 +38,7 @@ impl<CI: CommunicationInterface> Sh1106<CI> {
         &mut self.canvas
     }
 
-    pub fn flush_all(&mut self) -> Result<(), MiniOledError>{
+    pub fn flush_all(&mut self) -> Result<(), MiniOledError> {
         self.canvas.force_full_dirty_area();
         self.flush()
     }
@@ -46,18 +50,18 @@ impl<CI: CommunicationInterface> Sh1106<CI> {
             return Ok(());
         }
 
-        let start_page = Page::from((dirty_min_y>>3) as u8);
-        let end_page = Page::from((dirty_max_y>>3) as u8);
+        let start_page = Page::from((dirty_min_y >> 3) as u8);
+        let end_page = Page::from((dirty_max_y >> 3) as u8);
 
         let pixel_buffer = self.canvas.get_buffer();
 
-        for page in Page::range(start_page, end_page){
+        for page in Page::range(start_page, end_page) {
             let page_start_idx = fast_mul!(page, WIDTH) + dirty_min_x;
             let page_end_idx = fast_mul!(page, WIDTH) + dirty_max_x;
 
-            if page_end_idx as usize >= pixel_buffer.len(){
+            if page_end_idx as usize >= pixel_buffer.len() {
                 break;
-            } 
+            }
 
             let dirty_pixel_buffer = &pixel_buffer[page_start_idx as usize..=page_end_idx as usize];
             let current_column = dirty_min_x + self.canvas.get_column_offset() as u32;
@@ -69,7 +73,8 @@ impl<CI: CommunicationInterface> Sh1106<CI> {
             .into();
 
             self.communication_interface.write_command(&commands)?;
-            self.communication_interface.write_data(&dirty_pixel_buffer)?;
+            self.communication_interface
+                .write_data(dirty_pixel_buffer)?;
         }
 
         self.canvas.reset_dirty_area();
@@ -104,7 +109,7 @@ impl<CI: CommunicationInterface> Sh1106<CI> {
         .into();
 
         self.communication_interface
-            .write_command((&rotation_sequence).into())
+            .write_command(&rotation_sequence)
     }
 
     pub fn init(&mut self) -> Result<(), MiniOledError> {
@@ -127,7 +132,6 @@ impl<CI: CommunicationInterface> Sh1106<CI> {
         ]
         .into();
 
-        self.communication_interface
-            .write_command((&init_sequence).into())
+        self.communication_interface.write_command(&init_sequence)
     }
 }

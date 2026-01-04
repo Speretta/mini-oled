@@ -1,30 +1,31 @@
 use crate::error::MiniOledError;
 
-pub struct CommandBuffer<const N: usize>{
-    buffer: [Command; N]
+pub struct CommandBuffer<const N: usize> {
+    buffer: [Command; N],
 }
 
-impl From<Command> for CommandBuffer<1>{
+impl From<Command> for CommandBuffer<1> {
     fn from(value: Command) -> Self {
         CommandBuffer { buffer: [value] }
     }
 }
 
-impl<const N: usize> From<[Command; N]> for CommandBuffer<N>{
+impl<const N: usize> From<[Command; N]> for CommandBuffer<N> {
     fn from(value: [Command; N]) -> Self {
         CommandBuffer { buffer: value }
     }
 }
 
-impl<const N: usize> CommandBuffer<N>{
-    pub fn to_bytes<'a>(&self, buffer: &'a mut [u8]) -> Result<&'a [u8], MiniOledError>{
+impl<const N: usize> CommandBuffer<N> {
+    pub fn to_bytes<'a>(&self, buffer: &'a mut [u8]) -> Result<&'a [u8], MiniOledError> {
         let mut output_length = 1usize;
-        for command in &self.buffer{
+        for command in &self.buffer {
             let (command_bytes, bytes_length) = command.to_bytes();
-            if output_length + bytes_length > buffer.len(){
+            if output_length + bytes_length > buffer.len() {
                 return Err(MiniOledError::CommandBufferSizeError);
             }
-            buffer[output_length..output_length+bytes_length].copy_from_slice(&command_bytes[0..bytes_length]);
+            buffer[output_length..output_length + bytes_length]
+                .copy_from_slice(&command_bytes[0..bytes_length]);
             output_length += bytes_length;
         }
         Ok(&buffer[..output_length])
@@ -96,8 +97,8 @@ pub enum Command {
     DisableChargePump,
 }
 
-impl Command{
-    pub fn to_bytes(&self) -> ([u8; 2], usize){
+impl Command {
+    pub fn to_bytes(&self) -> ([u8; 2], usize) {
         match self {
             Command::Contrast(val) => ([0x81, *val], self.get_byte_size()),
             Command::EnableTestScreen => ([0xA5, 0], self.get_byte_size()),
@@ -118,8 +119,14 @@ impl Command{
             Command::DisplayOffset(offset) => ([0xD3, *offset], self.get_byte_size()),
             Command::AlternativeComPinConfig => ([0xDA, 0x12], self.get_byte_size()),
             Command::SequentialComPinConfig => ([0xDA, 0x02], self.get_byte_size()),
-            Command::DisplayClockDiv(fosc, div) => ([0xD5, ((0xF & fosc) << 4) | (0xF & div)], self.get_byte_size()),
-            Command::PreChargePeriod(phase1, phase2) => ([0xD9, ((0xF & phase2) << 4) | (0xF & phase1)], self.get_byte_size()),
+            Command::DisplayClockDiv(fosc, div) => (
+                [0xD5, ((0xF & fosc) << 4) | (0xF & div)],
+                self.get_byte_size(),
+            ),
+            Command::PreChargePeriod(phase1, phase2) => (
+                [0xD9, ((0xF & phase2) << 4) | (0xF & phase1)],
+                self.get_byte_size(),
+            ),
             Command::VcomhDeselect(level) => ([0xDB, (*level as u8) << 4], self.get_byte_size()),
             Command::Noop => ([0xE3, 0], self.get_byte_size()),
             Command::EnableChargePump => ([0xAD, 0x8B], self.get_byte_size()),
@@ -127,7 +134,7 @@ impl Command{
         }
     }
 
-    pub const fn get_byte_size(&self) -> usize{
+    pub const fn get_byte_size(&self) -> usize {
         match self {
             Command::Contrast(_) => 2,
             Command::EnableTestScreen => 1,
@@ -180,7 +187,7 @@ pub enum Page {
     Page7 = 7,
 }
 
-impl Page{
+impl Page {
     pub fn range(start: Page, end: Page) -> impl Iterator<Item = Page> {
         (start as u8..=end as u8).map(Page::from)
     }

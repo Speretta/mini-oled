@@ -1,8 +1,5 @@
-use embedded_hal::i2c::I2c;
-
-use crate::{interface::i2c::I2cInterface, screen::{self, properties::DisplayProperties}};
-
-use super::i2c::I2c0;
+#[allow(unused)]
+use crate::{interface::i2c::I2cInterface, screen, tests::i2c::I2c0};
 
 #[test]
 fn create_sh1106() {
@@ -11,8 +8,9 @@ fn create_sh1106() {
     let mut screen = screen::sh1106::Sh1106::new(i2c);
     let canvas = screen.get_mut_canvas();
 
-    screen.init();
+    screen.init().unwrap();
 
-    screen.set_rotation(screen::properties::DisplayRotation::Rotate0);
-
+    screen
+        .set_rotation(screen::properties::DisplayRotation::Rotate0)
+        .unwrap();
 }

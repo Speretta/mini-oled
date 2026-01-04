@@ -1,2 +1,2 @@
-mod sh1106;
 mod i2c;
+mod sh1106;
