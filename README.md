@@ -15,15 +15,15 @@ mini-oled = "0.1.1"
 
 ### Available Features
 
-- [✓] **no-std Support**: Designed for bare-metal environments.
-- [✓] **I2C Support**: Fully implemented using `embedded-hal`.
-- [✓] **embedded-graphics**: Seamless integration for drawing shapes, text, and images.
-- [✓] **Highly Optimized**: Algorithmically optimized with branchless programming and fast bitwise math for high performance.
-- [✓] **Buffered Display**: Uses ~1KB RAM to create a local frame buffer. **Trade-off**: Higher RAM usage but significantly reduced bus traffic (only changed pixels are sent).
-- [✓] **Partial Updates**: Smart "dirty area" tracking ensures efficient refresh rates.
-- [✓] **Display Rotation**: Hardware-assisted rotation (0, 90, 180, 270 degrees).
-- [✓] **Power Save Mode**: Supports turning the display logic on/off.
-- [✓] **Contrast Control**: Programmable display contrast.
+- [x] **no-std Support**: Designed for bare-metal environments.
+- [x] **I2C Support**: Fully implemented using `embedded-hal`.
+- [x] **embedded-graphics**: Seamless integration for drawing shapes, text, and images.
+- [x] **Highly Optimized**: Algorithmically optimized with branchless programming and fast bitwise math for high performance.
+- [x] **Buffered Display**: Uses ~1KB RAM to create a local frame buffer. **Trade-off**: Higher RAM usage but significantly reduced bus traffic (only changed pixels are sent).
+- [x] **Partial Updates**: Smart "dirty area" tracking ensures efficient refresh rates.
+- [x] **Display Rotation**: Hardware-assisted rotation (0, 90, 180, 270 degrees).
+- [x] **Power Save Mode**: Supports turning the display logic on/off.
+- [x] **Contrast Control**: Programmable display contrast.
 
 ### Planned Features
 
