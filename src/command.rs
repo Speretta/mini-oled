@@ -1,5 +1,30 @@
+//! # Commands
+//!
+//! This module defines the commands that can be sent to the SH1106 display controller.
+//! It includes the `Command` enum and the `CommandBuffer` struct for batching commands.
+//!
+//! ## Example
+//!
+//! Sending a manual command sequence (pseudo-code as `CommunicationInterface` is needed).
+//!
+//! ```rust
+//! use mini_oled::command::{Command, CommandBuffer};
+//!
+//! let commands: CommandBuffer<2> = [
+//!     Command::TurnDisplayOn,
+//!     Command::Contrast(0xFF),
+//! ].into();
+//!
+//! // Write commands using the interface...
+//! // interface.write_command(&commands).unwrap();
+//! ```
+
 use crate::error::MiniOledError;
 
+/// A buffer for storing commands to be sent to the display.
+///
+/// This struct holds an array of `Command`s.
+#[derive(Debug, Clone, Copy)]
 pub struct CommandBuffer<const N: usize> {
     buffer: [Command; N],
 }
@@ -17,6 +42,15 @@ impl<const N: usize> From<[Command; N]> for CommandBuffer<N> {
 }
 
 impl<const N: usize> CommandBuffer<N> {
+    /// Serializes the command buffer into a byte slice.
+    ///
+    /// # Arguments
+    ///
+    /// * `buffer` - A mutable byte slice to write the serialized commands into.
+    ///
+    /// # Returns
+    ///
+    /// A slice containing the written bytes on success, or `MiniOledError` if the buffer is too small.
     pub fn to_bytes<'a>(&self, buffer: &'a mut [u8]) -> Result<&'a [u8], MiniOledError> {
         let mut output_length = 1usize;
         for command in &self.buffer {
@@ -32,6 +66,7 @@ impl<const N: usize> CommandBuffer<N> {
     }
 }
 
+/// Enum representing commands that can be sent to the SH1106 controller.
 #[derive(Debug, Clone, Copy)]
 pub enum Command {
     /// Set contrast. Higher number is higher contrast.
@@ -41,59 +76,66 @@ pub enum Command {
     /// It does not overwrite the RAM. Often used for testing pixels or creating a flash effect.
     /// Sending `DisableTestSceen` resumes displaying the RAM content.
     EnableTestScreen,
+    /// Disables test screen mode.
     DisableTestScreen,
-    ///Inverts the display data.
+    /// Inverts the display data.
     /// Normally, a 1 in memory means a lit pixel. (`PositiveImageMode`)
     /// When inverted, 0 means lit and 1 means off. (`NegativeImageMode`)
     /// Default is `PositiveImageMode`.
     PositiveImageMode,
+    /// Enable negative image mode.
     NegativeImageMode,
-    /// Turns the display on or puts it into sleep mode.
+    /// Turns the display on.
+    TurnDisplayOn,
+    /// Puts the display into sleep mode.
     /// In sleep mode (0xAE), the internal circuit is active but the driving circuit is off,
     /// reducing power consumption drastically (< 20µA). RAM content is preserved.
-    TurnDisplayOn,
     TurnDisplayOff,
-    /// Set column address lower 4 bits
+    /// Set column address lower 4 bits.
     ColumnAddressLow(u8),
-    /// Set column address higher 4 bits
+    /// Set column address higher 4 bits.
     ColumnAddressHigh(u8),
-    /// Set page address
+    /// Set page address.
     PageAddress(Page),
-    /// Set display start line from 0-63
+    /// Set display start line from 0-63.
     StartLine(u8),
     /// Reverse columns from 127-0, mirrors the display horizontally (X-axis).
-    /// Default is `DisableSegmentRemap`
+    /// Default is `DisableSegmentRemap`.
     EnableSegmentRemap,
+    /// Disable segment remap (normal column order).
     DisableSegmentRemap,
-    /// Set multipex ratio from 15-63 (MUX-1)
+    /// Set multipex ratio from 15-63 (MUX-1).
     Multiplex(u8),
-    /// Scan from COM[n-1] to COM0 (where N is mux ratio)
+    /// Scan from COM[n-1] to COM0 (where N is mux ratio).
     /// Used together with `EnableSegmentRemap` to rotate the display 180 degrees.
-    /// Default is `DisableReverseComDir`
+    /// Default is `DisableReverseComDir`.
     EnableReverseComDir,
+    /// Disable reverse COM direction (normal scan).
     DisableReverseComDir,
-    /// Set vertical shift
+    /// Set vertical display offset.
     DisplayOffset(u8),
-    /// Setup com hardware configuration
+    /// Setup COM hardware configuration.
     /// Value indicates sequential (`SequentialComPinConfig`) or alternative (`AlternativeComPinConfig`)
     /// pin configuration.
     /// Default is `AlternativeComPinConfig`.
     AlternativeComPinConfig,
+    /// Sequential COM pin configuration.
     SequentialComPinConfig,
     /// Set up display clock.
-    /// First value is oscillator frequency, increasing with higher value
-    /// Second value is divide ratio - 1
+    /// First value is oscillator frequency, increasing with higher value.
+    /// Second value is divide ratio - 1.
     DisplayClockDiv(u8, u8),
-    /// Set up phase 1 and 2 of precharge period. each value is from 0-63
+    /// Set up phase 1 and 2 of precharge period. Each value is from 0-63.
     PreChargePeriod(u8, u8),
-    /// Set Vcomh Deselect level
+    /// Set Vcomh Deselect level.
     VcomhDeselect(VcomhLevel),
-    /// NOOP
+    /// No Operation.
     Noop,
-    /// Enable charge pump
-    /// Display must be off when performing this command
+    /// Enable charge pump.
+    /// Display must be off when performing this command.
     /// Default is `EnableChargePump`.
     EnableChargePump,
+    /// Disable charge pump.
     DisableChargePump,
 }
 
@@ -134,6 +176,7 @@ impl Command {
         }
     }
 
+    /// Returns the size in bytes of the command when serialized.
     pub const fn get_byte_size(&self) -> usize {
         match self {
             Command::Contrast(_) => 2,
@@ -165,7 +208,18 @@ impl Command {
     }
 }
 
-/// Display page
+/// Display page address (0-7).
+///
+/// The display memory is divided into 8 pages, each 8 pixels high.
+///
+/// # Example
+///
+/// ```rust
+/// use mini_oled::command::Page;
+///
+/// let page = Page::Page0;
+/// assert_eq!(page as u8, 0);
+/// ```
 #[repr(u8)]
 #[derive(Debug, Clone, Copy)]
 pub enum Page {
@@ -188,10 +242,12 @@ pub enum Page {
 }
 
 impl Page {
+    /// Returns an iterator over a range of pages.
     pub fn range(start: Page, end: Page) -> impl Iterator<Item = Page> {
         (start as u8..=end as u8).map(Page::from)
     }
 
+    /// Returns an iterator over all 8 pages (0-7).
     pub fn all() -> impl Iterator<Item = Page> {
         (0..8).map(Page::from)
     }
@@ -211,7 +267,17 @@ impl From<u8> for Page {
     }
 }
 
-/// Frame interval
+/// Frame interval configuration for the display clock.
+///
+/// This determines how often the display refreshes.
+///
+/// # Example
+///
+/// ```rust
+/// use mini_oled::command::NFrames;
+///
+/// let frames = NFrames::F5;
+/// ```
 #[repr(u8)]
 #[derive(Debug, Clone, Copy)]
 
@@ -234,7 +300,17 @@ pub enum NFrames {
     F256 = 0b011,
 }
 
-/// Vcomh Deselect level
+/// Vcomh Deselect level.
+///
+/// This adjusts the Vcomh regulator output.
+///
+/// # Example
+///
+/// ```rust
+/// use mini_oled::command::VcomhLevel;
+///
+/// let level = VcomhLevel::V077;
+/// ```
 #[repr(u8)]
 #[derive(Debug, Clone, Copy)]
 

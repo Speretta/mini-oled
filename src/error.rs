@@ -1,3 +1,33 @@
+//! # Error
+//!
+//! This module defines the errors that can occur when using the library.
+//!
+//! ## Example
+//!
+//! Handling errors from the library.
+//!
+//! ```rust
+//! use mini_oled::error::MiniOledError;
+//!
+//! fn check_error(result: Result<(), MiniOledError>) {
+//!     match result {
+//!         Ok(_) => {},
+//!         Err(MiniOledError::CommandBufferSizeError) => {
+//!             // Handle command buffer overflow
+//!         },
+//!         Err(MiniOledError::DataBufferSizeError) => {
+//!             // Handle data buffer overflow
+//!         },
+//!         Err(MiniOledError::I2cError(_)) => {
+//!             // Handle I2C communication error
+//!         },
+//!         Err(MiniOledError::SpiBusError(_)) => {
+//!             // Handle SPI communication error
+//!         },
+//!     }
+//! }
+//! ```
+
 use core::{
     error::Error,
     fmt::{self, Display},
@@ -7,9 +37,13 @@ use embedded_hal::{i2c, spi};
 
 #[derive(Debug)]
 pub enum MiniOledError {
+    /// Error when the command buffer size is exceeded.
     CommandBufferSizeError,
+    /// Error when the data buffer size is exceeded.
     DataBufferSizeError,
+    /// Error wrapping an I2C communication error.
     I2cError(i2c::ErrorKind),
+    /// Error wrapping an SPI communication error.
     SpiBusError(spi::ErrorKind),
 }
 

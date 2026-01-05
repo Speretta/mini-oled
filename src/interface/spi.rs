@@ -4,18 +4,36 @@ use crate::{command::CommandBuffer, error::MiniOledError};
 
 use super::CommunicationInterface;
 
-pub struct SPIInterface<SB: SpiBus> {
+/// SPI communication interface.
+///
+/// This struct implements the `CommunicationInterface` trait for SPI.
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use mini_oled::interface::spi::SpiInterface;
+///
+/// // Verify that your SPI driver implements embedded_hal::spi::SpiBus
+/// // let spi_driver = ...;
+/// let interface = SpiInterface::new(spi_driver);
+/// ```
+pub struct SpiInterface<SB: SpiBus> {
     _spi_bus: SB,
 }
 
-impl<SB: SpiBus> SPIInterface<SB> {
+impl<SB: SpiBus> SpiInterface<SB> {
+    /// Creates a new SPI interface.
+    ///
+    /// # Arguments
+    ///
+    /// * `_spi_bus` - The SPI bus.
     #[allow(unused)]
-    fn new(_spi_bus: SB) -> Self {
+    pub fn new(_spi_bus: SB) -> Self {
         Self { _spi_bus }
     }
 }
 
-impl<SB: SpiBus> CommunicationInterface for SPIInterface<SB> {
+impl<SB: SpiBus> CommunicationInterface for SpiInterface<SB> {
     fn init(&mut self) -> Result<(), MiniOledError> {
         Ok(())
     }

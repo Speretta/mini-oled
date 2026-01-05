@@ -4,12 +4,29 @@ use crate::{command::CommandBuffer, error::MiniOledError};
 
 use super::CommunicationInterface;
 
+/// I2C communication interface.
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use mini_oled::interface::i2c::I2cInterface;
+///
+/// // Verify that your I2C driver implements embedded_hal::i2c::I2c
+/// // let i2c_driver = ...;
+/// let interface = I2cInterface::new(i2c_driver, 0x3C);
+/// ```
 pub struct I2cInterface<IC: I2c> {
     i2c: IC,
     address: u8,
 }
 
 impl<IC: I2c> I2cInterface<IC> {
+    /// Creates a new I2C interface.
+    ///
+    /// # Arguments
+    ///
+    /// * `i2c` - The I2C peripheral.
+    /// * `address` - The I2C address of the display.
     pub fn new(i2c: IC, address: u8) -> Self {
         I2cInterface { i2c, address }
     }

@@ -44,10 +44,7 @@ use embedded_graphics::{
     primitives::{Circle, PrimitiveStyle, Rectangle},
     text::{Alignment, Text},
 };
-use mini_oled::{
-    interface::i2c::I2cInterface,
-    screen::{properties::DisplayRotation, sh1106::Sh1106},
-};
+use mini_oled::prelude::*;
 use core::fmt::Write;
 
 // ... setup your hardware I2C driver here ...
@@ -131,10 +128,7 @@ mini-oled = { version = "0.1.1", default-features = false }
 Usage:
 
 ```rust
-use mini_oled::{
-    interface::i2c::I2cInterface,
-    screen::{properties::DisplayRotation, sh1106::Sh1106},
-};
+use mini_oled::prelude::*;
 
 // ... setup your hardware I2C driver here ...
 // let i2c = ...;

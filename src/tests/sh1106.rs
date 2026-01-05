@@ -6,7 +6,7 @@ fn create_sh1106() {
     let i2c = I2c0;
     let i2c = I2cInterface::new(i2c, 0x78);
     let mut screen = screen::sh1106::Sh1106::new(i2c);
-    let canvas = screen.get_mut_canvas();
+    let _canvas = screen.get_mut_canvas();
 
     screen.init().unwrap();
 

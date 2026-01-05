@@ -1,9 +1,40 @@
-use crate::fast_mul;
+//! # Canvas
+//!
+//! The `Canvas` module provides the drawing surface for the display.
+//! It handles the pixel buffer, dirty area tracking for efficient updates, and
+//! integration with `embedded-graphics` if the feature is enabled.
+//!
+//! ## Example
+//!
+//! ```rust,ignore
+//! use mini_oled::screen::canvas::Canvas;
+//! // Canvas is normally obtained from the display driver, not created directly.
+//! // let canvas = display.get_mut_canvas();
+//!
+//! // set_pixel(x, y, on/off)
+//! // canvas.set_pixel(10, 20, true);
+//! ```
+
+use crate::screen::fast_mul;
 
 use crate::error::MiniOledError;
 
-use super::properties::{DisplayProperties, DisplayRotation};
+use crate::screen::properties::{DisplayProperties, DisplayRotation};
 
+/// A drawing canvas that manages the pixel buffer and dirty area tracking.
+///
+/// # Example
+///
+/// ```rust,ignore
+/// // Assuming you have a canvas instance from the Sh1106 driver
+/// // let mut canvas = screen.get_mut_canvas();
+///
+/// // Set a pixel
+/// canvas.set_pixel(10, 20, true);
+///
+/// // Access raw buffer
+/// let buffer = canvas.get_buffer();
+/// ```
 pub struct Canvas<const N: usize, const W: u32, const H: u32, const O: u8> {
     buffer: [u8; N],
     dirty_area_min: (u32, u32),
@@ -37,10 +68,12 @@ impl<const N: usize, const W: u32, const H: u32, const O: u8> Canvas<N, W, H, O>
         self.display_properties.set_rotation(display_rotation);
     }
 
+    /// Returns a reference to the pixel buffer.
     pub fn get_buffer(&self) -> &[u8; N] {
         &self.buffer
     }
 
+    /// Returns a mutable reference to the pixel buffer.
     pub fn get_mut_buffer(&mut self) -> &mut [u8; N] {
         &mut self.buffer
     }
@@ -60,6 +93,13 @@ impl<const N: usize, const W: u32, const H: u32, const O: u8> Canvas<N, W, H, O>
     }
 
     #[inline]
+    /// Sets the state of a single pixel.
+    ///
+    /// # Arguments
+    ///
+    /// * `x` - The X coordinate of the pixel.
+    /// * `y` - The Y coordinate of the pixel.
+    /// * `pixel_status` - `true` to turn the pixel on, `false` to turn it off.
     pub fn set_pixel(&mut self, x: u32, y: u32, pixel_status: bool) {
         let (physical_width, physical_height) = self.display_properties.get_display_size();
         let display_rotation = self.display_properties.get_rotation();

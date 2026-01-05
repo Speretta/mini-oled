@@ -1,3 +1,34 @@
+//! Properties of the display, such as dimensions and rotation.
+//!
+//! This struct is typically used internally by the `Sh1106` driver, but can be interacted with
+//! via methods like `set_rotation` on the driver or canvas.
+//!
+//! ```rust
+//! use mini_oled::screen::properties::{DisplayProperties, DisplayRotation};
+//!
+//! // DisplayProperties is used internally but can be default initialized.
+//! // The generic parameters are Width, Height, and Offset.
+//! let properties: DisplayProperties<128, 64, 2> = DisplayProperties::default();
+//!
+//! // DisplayRotation is used to configure the screen orientation.
+//! let rotation = DisplayRotation::Rotate90;
+//! ```
+
+/// Properties of the display, such as dimensions and rotation.
+///
+/// This struct is typically used internally by the `Sh1106` driver, but can be interacted with
+/// via methods like `set_rotation` on the driver or canvas.
+///
+/// ```rust
+/// use mini_oled::screen::properties::{DisplayProperties, DisplayRotation};
+///
+/// // DisplayProperties is used internally but can be default initialized.
+/// // The generic parameters are Width, Height, and Offset.
+/// let properties: DisplayProperties<128, 64, 2> = DisplayProperties::default();
+///
+/// // DisplayRotation is used to configure the screen orientation.
+/// let rotation = DisplayRotation::Rotate90;
+/// ```
 pub struct DisplayProperties<const W: u32, const H: u32, const O: u8> {
     display_rotation: DisplayRotation,
 }
@@ -32,7 +63,15 @@ impl<const W: u32, const H: u32, const O: u8> Default for DisplayProperties<W, H
     }
 }
 
-/// Display rotation
+/// Display rotation configuration.
+///
+/// # Example
+///
+/// ```rust
+/// use mini_oled::screen::properties::DisplayRotation;
+///
+/// let rotation = DisplayRotation::Rotate90;
+/// ```
 #[derive(Clone, Copy)]
 pub enum DisplayRotation {
     /// No rotation, normal display

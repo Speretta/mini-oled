@@ -1,11 +1,32 @@
+//! # SH1106 Driver
+//!
+//! This module contains the main `Sh1106` driver struct.
+//! It brings together the communication interface and the canvas to control the display.
+//!
+//! ## Example
+//!
+//! ```rust,ignore
+//! use mini_oled::{
+//!     interface::i2c::I2cInterface,
+//!     screen::sh1106::Sh1106,
+//! };
+//!
+//! // let i2c = ...; // I2C peripheral
+//! let interface = I2cInterface::new(i2c, 0x3C);
+//! let mut display = Sh1106::new(interface);
+//!
+//! display.init().unwrap();
+//! display.test_screen().unwrap();
+//! ```
+
 use crate::{
     command::{Command, CommandBuffer, Page},
     error::MiniOledError,
-    fast_mul,
     interface::CommunicationInterface,
+    screen::fast_mul,
 };
 
-use super::{
+use crate::screen::{
     canvas::Canvas,
     properties::{DisplayProperties, DisplayRotation},
 };
@@ -15,12 +36,34 @@ const HEIGHT: u32 = 64;
 const OFFSET: u8 = 2;
 const BUFFER_SIZE: usize = WIDTH as usize * HEIGHT as usize / 8;
 
+/// The main driver struct for the SH1106 OLED display.
+///
+/// This struct manages the communication interface and the drawing canvas.
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use mini_oled::{
+///     interface::i2c::I2cInterface,
+///     screen::sh1106::Sh1106,
+/// };
+///
+/// // let i2c_interface = ...;
+/// let mut screen = Sh1106::new(i2c_interface);
+/// screen.init().unwrap();
+/// screen.test_screen().unwrap();
+/// ```
 pub struct Sh1106<CI: CommunicationInterface> {
     communication_interface: CI,
     canvas: Canvas<BUFFER_SIZE, WIDTH, HEIGHT, OFFSET>,
 }
 
 impl<CI: CommunicationInterface> Sh1106<CI> {
+    /// Creates a new `Sh1106` driver instance.
+    ///
+    /// # Arguments
+    ///
+    /// * `communication_interface` - The initialized communication interface (I2C or ~~SPI~~).
     pub fn new(communication_interface: CI) -> Sh1106<CI> {
         let display_properties: DisplayProperties<WIDTH, HEIGHT, 2> =
             DisplayProperties::new(DisplayRotation::Rotate0);
@@ -30,19 +73,25 @@ impl<CI: CommunicationInterface> Sh1106<CI> {
         }
     }
 
+    /// Returns a reference to the underlying canvas.
     pub fn get_canvas(&self) -> &Canvas<BUFFER_SIZE, WIDTH, HEIGHT, OFFSET> {
         &self.canvas
     }
 
+    /// Returns a mutable reference to the underlying canvas.
     pub fn get_mut_canvas(&mut self) -> &mut Canvas<BUFFER_SIZE, WIDTH, HEIGHT, OFFSET> {
         &mut self.canvas
     }
 
+    /// Flushes the entire display buffer to the screen, refreshing all pixels.
     pub fn flush_all(&mut self) -> Result<(), MiniOledError> {
         self.canvas.force_full_dirty_area();
         self.flush()
     }
 
+    /// Flushes only the modified parts of the display buffer to the screen.
+    ///
+    /// This is more efficient than `flush_all` as it only sends changed data.
     pub fn flush(&mut self) -> Result<(), MiniOledError> {
         let ((dirty_min_x, dirty_min_y), (dirty_max_x, dirty_max_y)) = self.canvas.get_dirty_area();
 
@@ -81,16 +130,23 @@ impl<CI: CommunicationInterface> Sh1106<CI> {
         Ok(())
     }
 
+    /// Returns the current rotation of the display.
     pub fn get_rotation(&self) -> &DisplayRotation {
         self.canvas.get_rotation()
     }
 
+    /// Enables the test screen mode (all pixels on).
     pub fn test_screen(&mut self) -> Result<(), MiniOledError> {
         let command_buffer = &(CommandBuffer::from([Command::EnableTestScreen]));
 
         self.communication_interface.write_command(command_buffer)
     }
 
+    /// Sets the rotation of the display.
+    ///
+    /// # Arguments
+    ///
+    /// * `display_rotation` - The new rotation setting.
     pub fn set_rotation(&mut self, display_rotation: DisplayRotation) -> Result<(), MiniOledError> {
         self.canvas.set_rotation(display_rotation);
 
@@ -112,6 +168,9 @@ impl<CI: CommunicationInterface> Sh1106<CI> {
             .write_command(&rotation_sequence)
     }
 
+    /// Initializes the display with default settings.
+    ///
+    /// This sends a sequence of commands to set up the display driver.
     pub fn init(&mut self) -> Result<(), MiniOledError> {
         let init_sequence: CommandBuffer<15> = [
             Command::TurnDisplayOff,
