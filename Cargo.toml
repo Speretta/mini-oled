@@ -4,9 +4,9 @@ authors = ["Speretta <speretta@protonmail.com>"]
 description = "I2C driver for the SH1106 OLED display controller (SPI planned)"
 categories = ["embedded", "no-std"]
 keywords = ["no-std", "sh1106", "oled", "embedded", "embedded-hal-driver"]
-version = "0.1.2"
+version = "0.1.3"
 edition = "2024"
-license = "MIT"
+license = "MIT OR Apache-2.0"
 repository = "https://github.com/Speretta/mini-oled"
 readme = "README.md"
 
