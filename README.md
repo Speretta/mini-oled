@@ -8,7 +8,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-mini-oled = "0.1.1"
+mini-oled = "0.1.2"
 ```
 
 ## Features
