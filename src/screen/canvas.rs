@@ -1,17 +1,18 @@
 //! # Canvas
 //!
 //! The `Canvas` module provides the drawing surface for the display.
-//! It handles the pixel buffer, dirty area tracking for efficient updates, and
-//! integration with `embedded-graphics` if the feature is enabled.
+//! It handles the pixel buffer, dirty-area tracking for efficient partial
+//! updates, and integration with `embedded-graphics` when the corresponding
+//! feature is enabled.
 //!
 //! ## Example
 //!
 //! ```rust,ignore
 //! use mini_oled::screen::canvas::Canvas;
 //! // Canvas is normally obtained from the display driver, not created directly.
-//! // let canvas = display.get_mut_canvas();
+//! // let canvas = display.canvas_mut();
 //!
-//! // set_pixel(x, y, on/off)
+//! // set_pixel uses logical coordinates that are automatically rotated.
 //! // canvas.set_pixel(10, 20, true);
 //! ```
 
@@ -19,61 +20,86 @@ use crate::screen::fast_mul;
 
 use crate::error::MiniOledError;
 
-use crate::screen::properties::{DisplayProperties, DisplayRotation};
+use crate::screen::config::DisplayRotation;
 
-/// A drawing canvas that manages the pixel buffer and dirty area tracking.
+/// A drawing canvas that manages the pixel buffer and dirty-area tracking.
+///
+/// The canvas stores pixel data in page-addressed format (8 vertical pixels
+/// per byte) suitable for the SH1106 controller. It also tracks a "dirty
+/// rectangle" so that the driver can send only the changed region during
+/// [`Sh1106::flush`](crate::screen::sh1106::Sh1106::flush).
+///
+/// # Coordinate system
+///
+/// All public drawing methods (e.g. [`set_pixel`](Self::set_pixel)) accept
+/// **logical** coordinates. When a rotation other than
+/// [`DisplayRotation::Rotate0`](crate::screen::config::DisplayRotation::Rotate0)
+/// is active, the canvas maps the logical `(x, y)` to the correct physical
+/// memory location automatically.
 ///
 /// # Example
 ///
 /// ```rust,ignore
 /// // Assuming you have a canvas instance from the Sh1106 driver
-/// // let mut canvas = screen.get_mut_canvas();
+/// // let mut canvas = screen.canvas_mut();
 ///
-/// // Set a pixel
+/// // Set a pixel in logical coordinates
 /// canvas.set_pixel(10, 20, true);
 ///
-/// // Access raw buffer
+/// // Access the raw byte buffer
 /// let buffer = canvas.get_buffer();
 /// ```
 pub struct Canvas<const N: usize, const W: u32, const H: u32, const O: u8> {
     buffer: [u8; N],
     dirty_area_min: (u32, u32),
     dirty_area_max: (u32, u32),
-    display_properties: DisplayProperties<W, H, O>,
+    display_rotation: DisplayRotation,
 }
 
 impl<const N: usize, const W: u32, const H: u32, const O: u8> Canvas<N, W, H, O> {
-    pub(crate) fn new(display_properties: DisplayProperties<W, H, O>) -> Self {
+    pub(crate) fn new(display_rotation: DisplayRotation) -> Self {
         Canvas {
             buffer: [0; N],
             dirty_area_max: (0, 0),
-            dirty_area_min: display_properties.get_display_size(),
-            display_properties,
+            dirty_area_min: (W, H),
+            display_rotation,
         }
     }
 
+    /// Returns the column offset added to page addresses when flushing.
+    ///
+    /// This compensates for controller memory mapping differences on some
+    /// display modules.
     pub(crate) fn get_column_offset(&self) -> u8 {
-        self.display_properties.get_column_offset()
+        O
     }
 
+    /// Returns the display dimensions in logical pixels.
     pub(crate) const fn get_display_size(&self) -> (u32, u32) {
-        self.display_properties.get_display_size()
-    }
-
-    pub(crate) fn get_rotation(&self) -> &DisplayRotation {
-        self.display_properties.get_rotation()
+        (W, H)
     }
 
     pub(crate) fn set_rotation(&mut self, display_rotation: DisplayRotation) {
-        self.display_properties.set_rotation(display_rotation);
+        self.display_rotation = display_rotation;
     }
 
-    /// Returns a reference to the pixel buffer.
+    /// Returns an immutable reference to the raw pixel buffer.
+    ///
+    /// The buffer is organised in pages: each byte represents 8 vertical
+    /// pixels. If you modify the buffer through [`get_mut_buffer`](Self::get_mut_buffer),
+    /// the dirty area is **not** updated automatically. You must call
+    /// [`Sh1106::flush_all`](crate::screen::sh1106::Sh1106::flush_all) afterwards
+    /// to ensure the display reflects your changes.
     pub fn get_buffer(&self) -> &[u8; N] {
         &self.buffer
     }
 
-    /// Returns a mutable reference to the pixel buffer.
+    /// Returns a mutable reference to the raw pixel buffer.
+    ///
+    /// **Warning:** Direct buffer mutations bypass dirty-area tracking. After
+    /// modifying the buffer you should either mark the affected region dirty
+    /// manually or call [`Sh1106::flush_all`](crate::screen::sh1106::Sh1106::flush_all)
+    /// to refresh the whole screen.
     pub fn get_mut_buffer(&mut self) -> &mut [u8; N] {
         &mut self.buffer
     }
@@ -82,27 +108,37 @@ impl<const N: usize, const W: u32, const H: u32, const O: u8> Canvas<N, W, H, O>
         (self.dirty_area_min, self.dirty_area_max)
     }
 
+    /// Marks the entire canvas as dirty so the next flush sends everything.
     pub(crate) fn force_full_dirty_area(&mut self) {
         self.dirty_area_min = (0, 0);
         self.dirty_area_max = (W - 1, H - 1);
     }
 
+    /// Resets the dirty area to an empty rectangle.
     pub(crate) fn reset_dirty_area(&mut self) {
-        self.dirty_area_min = self.display_properties.get_display_size();
+        self.dirty_area_min = (W, H);
         self.dirty_area_max = (0, 0);
     }
 
-    #[inline]
-    /// Sets the state of a single pixel.
+    /// Sets the state of a single pixel using **logical** coordinates.
+    ///
+    /// The coordinates are automatically translated according to the current
+    /// [`DisplayRotation`](crate::screen::config::DisplayRotation). Pixels that
+    /// fall outside the logical bounds are silently ignored.
+    ///
+    /// This method also updates the internal dirty area so that
+    /// [`Sh1106::flush`](crate::screen::sh1106::Sh1106::flush) can later send
+    /// only the changed region.
     ///
     /// # Arguments
     ///
-    /// * `x` - The X coordinate of the pixel.
-    /// * `y` - The Y coordinate of the pixel.
+    /// * `x` - Logical X coordinate.
+    /// * `y` - Logical Y coordinate.
     /// * `pixel_status` - `true` to turn the pixel on, `false` to turn it off.
+    #[inline]
     pub fn set_pixel(&mut self, x: u32, y: u32, pixel_status: bool) {
-        let (physical_width, physical_height) = self.display_properties.get_display_size();
-        let display_rotation = self.display_properties.get_rotation();
+        let (physical_width, physical_height) = (W, H);
+        let display_rotation = self.display_rotation;
 
         let (calculated_width_for_rotation, calculated_height_for_rotation) = match display_rotation
         {
@@ -131,7 +167,7 @@ impl<const N: usize, const W: u32, const H: u32, const O: u8> Canvas<N, W, H, O>
             self.dirty_area_max.1 = y;
         }
 
-        let (idx, bit_mask) = match *display_rotation {
+        let (idx, bit_mask) = match display_rotation {
             DisplayRotation::Rotate0 | DisplayRotation::Rotate180 => {
                 let idx = fast_mul!((y >> 3), W) + x; // y >> 3 is equal to y / 8
                 let bit = 1 << (y & 7); // y & 7 is equal to y % 8
@@ -156,6 +192,7 @@ impl<const N: usize, const W: u32, const H: u32, const O: u8> Canvas<N, W, H, O>
         }
     }
 }
+
 #[cfg(feature = "embedded-graphics-core")]
 use embedded_graphics_core::{
     Pixel,
@@ -191,7 +228,7 @@ impl<const N: usize, const W: u32, const H: u32, const O: u8> OriginDimensions
     for Canvas<N, W, H, O>
 {
     fn size(&self) -> Size {
-        let (width, height) = self.display_properties.get_display_size();
+        let (width, height) = (W, H);
 
         Size::new(width, height)
     }
