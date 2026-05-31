@@ -27,8 +27,8 @@
 //! ```
 
 pub mod canvas;
-pub mod sh1106;
 pub mod config;
+pub mod sh1106;
 
 macro_rules! fast_mul {
     ($value:expr, $right:expr) => {{

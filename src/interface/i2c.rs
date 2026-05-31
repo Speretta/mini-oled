@@ -67,10 +67,7 @@ impl<IC: I2c> CommunicationInterface for I2cInterface<IC> {
             .map_err(|e| MiniOledError::I2cError(e.kind()))
     }
 
-    fn write_command<const N: usize, B>(
-        &mut self,
-        command_buf: B,
-    ) -> Result<(), MiniOledError>
+    fn write_command<const N: usize, B>(&mut self, command_buf: B) -> Result<(), MiniOledError>
     where
         B: Borrow<CommandBuffer<N>>,
     {

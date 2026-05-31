@@ -79,11 +79,15 @@ impl<const N: usize> CommandBuffer<N> {
 
 impl<const N: usize> Deref for CommandBuffer<N> {
     type Target = [Command];
-    fn deref(&self) -> &[Command] { &self.buffer }
+    fn deref(&self) -> &[Command] {
+        &self.buffer
+    }
 }
 
 impl<const N: usize> DerefMut for CommandBuffer<N> {
-    fn deref_mut(&mut self) -> &mut [Command] { &mut self.buffer }
+    fn deref_mut(&mut self) -> &mut [Command] {
+        &mut self.buffer
+    }
 }
 
 /// A single command that can be sent to the SH1106 controller.

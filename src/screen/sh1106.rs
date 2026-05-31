@@ -29,10 +29,7 @@ use crate::{
     screen::{config::ScreenConfig, fast_mul},
 };
 
-use crate::screen::{
-    canvas::Canvas,
-    config::DisplayRotation,
-};
+use crate::screen::{canvas::Canvas, config::DisplayRotation};
 
 const WIDTH: u32 = 128;
 const HEIGHT: u32 = 64;
@@ -316,11 +313,7 @@ impl<CI: CommunicationInterface> Sh1106<CI> {
     /// * `osc_freq` - Oscillator frequency, 0–15. Higher values increase
     ///   refresh rate (and power consumption).
     /// * `div_ratio` - Divide ratio minus one, 0–15.
-    pub fn set_clock_div(
-        &mut self,
-        osc_freq: u8,
-        div_ratio: u8,
-    ) -> Result<(), MiniOledError> {
+    pub fn set_clock_div(&mut self, osc_freq: u8, div_ratio: u8) -> Result<(), MiniOledError> {
         self.screen_config.set_clock_div_osc_freq(osc_freq);
         self.screen_config.set_clock_div_ratio(div_ratio);
         self.communication_interface
@@ -333,11 +326,7 @@ impl<CI: CommunicationInterface> Sh1106<CI> {
     ///
     /// * `phase1` - Phase 1 period, 0–15.
     /// * `phase2` - Phase 2 period, 0–15.
-    pub fn set_precharge_period(
-        &mut self,
-        phase1: u8,
-        phase2: u8,
-    ) -> Result<(), MiniOledError> {
+    pub fn set_precharge_period(&mut self, phase1: u8, phase2: u8) -> Result<(), MiniOledError> {
         self.screen_config.set_precharge_phase1(phase1);
         self.screen_config.set_precharge_phase2(phase2);
         self.communication_interface
@@ -428,20 +417,38 @@ impl<CI: CommunicationInterface> Sh1106<CI> {
         let rotation_command_buffer: CommandBuffer<2> = screen_config.rotation().into();
         let init_sequence: CommandBuffer<15> = [
             Command::TurnDisplayOff,
-            Command::DisplayClockDiv(screen_config.clock_div_osc_freq(), screen_config.clock_div_ratio()),
+            Command::DisplayClockDiv(
+                screen_config.clock_div_osc_freq(),
+                screen_config.clock_div_ratio(),
+            ),
             Command::Multiplex(screen_config.multiplex_ratio()),
             Command::DisplayOffset(screen_config.display_offset()),
             Command::StartLine(screen_config.start_line()),
-            if screen_config.charge_pump_enabled() { Command::EnableChargePump } else { Command::DisableChargePump },
+            if screen_config.charge_pump_enabled() {
+                Command::EnableChargePump
+            } else {
+                Command::DisableChargePump
+            },
             rotation_command_buffer[0],
             rotation_command_buffer[1],
             screen_config.com_pin_config().into(),
             Command::Contrast(screen_config.contrast()),
-            Command::PreChargePeriod(screen_config.precharge_phase1(), screen_config.precharge_phase2()),
+            Command::PreChargePeriod(
+                screen_config.precharge_phase1(),
+                screen_config.precharge_phase2(),
+            ),
             Command::VcomhDeselect(screen_config.vcomh_level()),
             Command::DisableTestScreen,
-            if screen_config.inverse_display() { Command::NegativeImageMode } else { Command::PositiveImageMode},
-            if screen_config.display_on() { Command::TurnDisplayOn } else { Command::TurnDisplayOff },
+            if screen_config.inverse_display() {
+                Command::NegativeImageMode
+            } else {
+                Command::PositiveImageMode
+            },
+            if screen_config.display_on() {
+                Command::TurnDisplayOn
+            } else {
+                Command::TurnDisplayOff
+            },
         ]
         .into();
 
