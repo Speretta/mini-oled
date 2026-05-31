@@ -1,4 +1,4 @@
-//! # Error
+//! # Error Types
 //!
 //! This module defines the errors that can occur when using the library.
 //!
@@ -21,7 +21,7 @@
 //!         Err(MiniOledError::I2cError(_)) => {
 //!             // Handle I2C communication error
 //!         },
-//!         Err(MiniOledError::SpiBusError(_)) => {
+//!         Err(MiniOledError::SpiError(_)) => {
 //!             // Handle SPI communication error
 //!         },
 //!     }
@@ -33,18 +33,30 @@ use core::{
     fmt::{self, Display},
 };
 
-use embedded_hal::{i2c, spi};
+use embedded_hal::{digital, i2c, spi};
 
+/// Errors that can be returned by the driver or its communication interfaces.
 #[derive(Debug)]
 pub enum MiniOledError {
-    /// Error when the command buffer size is exceeded.
+    /// The provided byte slice was too small to hold the serialized command
+    /// sequence.
     CommandBufferSizeError,
-    /// Error when the data buffer size is exceeded.
+    /// The pixel data buffer exceeded the maximum length allowed for a single
+    /// bus transaction (128 bytes).
     DataBufferSizeError,
-    /// Error wrapping an I2C communication error.
+    /// An I2C communication error occurred.
     I2cError(i2c::ErrorKind),
-    /// Error wrapping an SPI communication error.
-    SpiBusError(spi::ErrorKind),
+    /// An SPI communication or pin-control error occurred.
+    SpiError(SpiErrorType),
+}
+
+/// SPI-specific error kinds.
+#[derive(Debug)]
+pub enum SpiErrorType {
+    /// An SPI bus communication error.
+    Comm(spi::ErrorKind),
+    /// A digital pin (e.g. DC) manipulation error.
+    Pin(digital::ErrorKind),
 }
 
 impl Display for MiniOledError {
@@ -59,9 +71,15 @@ impl Display for MiniOledError {
             MiniOledError::I2cError(error_kind) => {
                 write!(f, "Embedded Hal I2C Error: {}", error_kind)
             }
-            MiniOledError::SpiBusError(error_kind) => {
-                write!(f, "Embedded Hal Spi Bus Error: {}", error_kind)
-            }
+            MiniOledError::SpiError(spi_error_type) => match spi_error_type {
+                SpiErrorType::Comm(error_kind) => {
+                    write!(f, "Embedded Hal Spi Bus Error: {}", error_kind)
+                }
+
+                SpiErrorType::Pin(error_kind) => {
+                    write!(f, "Embedded Hal Spi Pin Error: {}", error_kind)
+                }
+            },
         }
     }
 }
