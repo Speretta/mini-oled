@@ -1,7 +1,8 @@
 //! # Screen
 //!
-//! This module contains the screen-related definitions, including the `Canvas` for drawing,
-//! `DisplayProperties` for configuration, and the `Sh1106` driver implementation.
+//! This module contains the screen-related definitions, including the [`Canvas`]
+//! for drawing, [`ScreenConfig`] for hardware configuration, and the [`Sh1106`]
+//! driver implementation.
 //!
 //! ## Example
 //!
@@ -10,23 +11,24 @@
 //! ```rust,ignore
 //! use mini_oled::{
 //!     interface::i2c::I2cInterface,
-//!     screen::{properties::DisplayRotation, sh1106::Sh1106},
+//!     screen::{config::{DisplayRotation, ScreenConfig}, sh1106::Sh1106},
 //! };
 //!
 //! // let i2c = ...; // Your I2C driver
 //! let i2c_interface = I2cInterface::new(i2c, 0x3C);
-//! let mut screen = Sh1106::new(i2c_interface);
+//! let config = ScreenConfig::new().with_rotation(DisplayRotation::Rotate0);
+//! let mut screen = Sh1106::new(i2c_interface, config);
 //!
 //! screen.init().unwrap();
 //!
-//! let canvas = screen.get_mut_canvas();
+//! let canvas = screen.canvas_mut();
 //! canvas.set_pixel(10, 10, true);
 //! screen.flush().unwrap();
 //! ```
 
 pub mod canvas;
-pub mod properties;
 pub mod sh1106;
+pub mod config;
 
 macro_rules! fast_mul {
     ($value:expr, $right:expr) => {{

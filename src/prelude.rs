@@ -1,6 +1,7 @@
-//! Prelude - Commonly used types
+//! # Prelude
 //!
-//! This module re-exports the most commonly used types and traits for convenience.
+//! This module re-exports the most commonly used types and traits for
+//! convenience so that you can import them with a single `use` statement.
 //!
 //! # Example
 //!
@@ -11,5 +12,4 @@
 pub use crate::error::MiniOledError;
 pub use crate::interface::i2c::I2cInterface;
 pub use crate::interface::spi::SpiInterface;
-pub use crate::screen::properties::{DisplayProperties, DisplayRotation};
 pub use crate::screen::sh1106::Sh1106;
