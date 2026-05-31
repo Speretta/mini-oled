@@ -1,11 +1,13 @@
 //! # Commands
 //!
-//! This module defines the commands that can be sent to the SH1106 display controller.
-//! It includes the `Command` enum and the `CommandBuffer` struct for batching commands.
+//! This module defines the commands that can be sent to the SH1106 display
+//! controller. It includes the [`Command`] enum and the [`CommandBuffer`]
+//! struct for batching multiple commands into a single bus transaction.
 //!
 //! ## Example
 //!
-//! Sending a manual command sequence (pseudo-code as `CommunicationInterface` is needed).
+//! Sending a manual command sequence (pseudo-code as `CommunicationInterface`
+//! is needed).
 //!
 //! ```rust
 //! use mini_oled::command::{Command, CommandBuffer};
@@ -19,11 +21,15 @@
 //! // interface.write_command(&commands).unwrap();
 //! ```
 
+use core::ops::{Deref, DerefMut};
+
 use crate::error::MiniOledError;
 
-/// A buffer for storing commands to be sent to the display.
+/// A fixed-size buffer for storing commands before they are sent to the display.
 ///
-/// This struct holds an array of `Command`s.
+/// The const generic `N` is the number of [`Command`] values the buffer can
+/// hold. You can create a `CommandBuffer` from a single command or from an
+/// array of commands using the [`From`] implementations.
 #[derive(Debug, Clone, Copy)]
 pub struct CommandBuffer<const N: usize> {
     buffer: [Command; N],
@@ -42,19 +48,24 @@ impl<const N: usize> From<[Command; N]> for CommandBuffer<N> {
 }
 
 impl<const N: usize> CommandBuffer<N> {
-    /// Serializes the command buffer into a byte slice.
+    /// Serializes the commands into the provided byte slice.
+    ///
+    /// Each command is converted to its wire representation and written
+    /// consecutively into `buffer`. The returned slice is a sub-slice of
+    /// `buffer` containing only the bytes that were written.
     ///
     /// # Arguments
     ///
-    /// * `buffer` - A mutable byte slice to write the serialized commands into.
+    /// * `buffer` - Mutable byte slice to receive the serialized data.
     ///
-    /// # Returns
+    /// # Errors
     ///
-    /// A slice containing the written bytes on success, or `MiniOledError` if the buffer is too small.
-    pub fn to_bytes<'a>(&self, buffer: &'a mut [u8]) -> Result<&'a [u8], MiniOledError> {
+    /// Returns [`MiniOledError::CommandBufferSizeError`] if `buffer` is too
+    /// small to hold the serialized form of all commands.
+    pub fn encode_to_slice<'a>(&self, buffer: &'a mut [u8]) -> Result<&'a [u8], MiniOledError> {
         let mut output_length = 1usize;
         for command in &self.buffer {
-            let (command_bytes, bytes_length) = command.to_bytes();
+            let (command_bytes, bytes_length) = command.as_bytes_and_len();
             if output_length + bytes_length > buffer.len() {
                 return Err(MiniOledError::CommandBufferSizeError);
             }
@@ -66,8 +77,21 @@ impl<const N: usize> CommandBuffer<N> {
     }
 }
 
-/// Enum representing commands that can be sent to the SH1106 controller.
-#[derive(Debug, Clone, Copy)]
+impl<const N: usize> Deref for CommandBuffer<N> {
+    type Target = [Command];
+    fn deref(&self) -> &[Command] { &self.buffer }
+}
+
+impl<const N: usize> DerefMut for CommandBuffer<N> {
+    fn deref_mut(&mut self) -> &mut [Command] { &mut self.buffer }
+}
+
+/// A single command that can be sent to the SH1106 controller.
+///
+/// Most variants map 1-to-1 to the commands listed in the SH1106 datasheet.
+/// Use [`as_bytes_and_len`](Self::as_bytes_and_len) to obtain the raw byte
+/// representation before transmitting over I2C/SPI.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Command {
     /// Set contrast. Higher number is higher contrast.
     /// Default is `0x7F`.
@@ -140,7 +164,11 @@ pub enum Command {
 }
 
 impl Command {
-    pub fn to_bytes(&self) -> ([u8; 2], usize) {
+    /// Returns the raw byte representation and its on-wire length.
+    ///
+    /// The first element is a 2-byte array; the second element tells how many
+    /// bytes of that array are actually used (1 or 2).
+    pub fn as_bytes_and_len(&self) -> ([u8; 2], usize) {
         match self {
             Command::Contrast(val) => ([0x81, *val], self.get_byte_size()),
             Command::EnableTestScreen => ([0xA5, 0], self.get_byte_size()),
@@ -176,7 +204,7 @@ impl Command {
         }
     }
 
-    /// Returns the size in bytes of the command when serialized.
+    /// Returns the number of bytes this command occupies on the wire.
     pub const fn get_byte_size(&self) -> usize {
         match self {
             Command::Contrast(_) => 2,
@@ -221,7 +249,7 @@ impl Command {
 /// assert_eq!(page as u8, 0);
 /// ```
 #[repr(u8)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Page {
     /// Page 0
     Page0 = 0,
@@ -242,7 +270,7 @@ pub enum Page {
 }
 
 impl Page {
-    /// Returns an iterator over a range of pages.
+    /// Returns an iterator over an inclusive range of pages.
     pub fn range(start: Page, end: Page) -> impl Iterator<Item = Page> {
         (start as u8..=end as u8).map(Page::from)
     }
@@ -254,16 +282,19 @@ impl Page {
 }
 
 impl From<u8> for Page {
+    #[inline]
     fn from(val: u8) -> Page {
-        // Faster way the casting u8 to Page
-        // ```rust
-        // 0x00 => Page::Page0,
-        // 0x08 => Page::Page1,
-        // 0x09 => Page::Page2,
-        // 0x0A => Page::Page3,
-        // ```
-        let new_val = val & 0b111;
-        unsafe { core::mem::transmute(new_val) }
+        match val & 0b111 {
+            0 => Page::Page0,
+            1 => Page::Page1,
+            2 => Page::Page2,
+            3 => Page::Page3,
+            4 => Page::Page4,
+            5 => Page::Page5,
+            6 => Page::Page6,
+            7 => Page::Page7,
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -280,7 +311,6 @@ impl From<u8> for Page {
 /// ```
 #[repr(u8)]
 #[derive(Debug, Clone, Copy)]
-
 pub enum NFrames {
     /// 2 Frames
     F2 = 0b111,
@@ -312,8 +342,7 @@ pub enum NFrames {
 /// let level = VcomhLevel::V077;
 /// ```
 #[repr(u8)]
-#[derive(Debug, Clone, Copy)]
-
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum VcomhLevel {
     /// 0.65 * Vcc
     V065 = 0b001,
